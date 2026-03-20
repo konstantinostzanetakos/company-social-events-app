@@ -70,6 +70,10 @@ def normalize_name(name):
     return " ".join(str(name).strip().split())
 
 
+def normalize_username(username):
+    return normalize_name(username).replace(" ", "").lower()
+
+
 def format_event_datetime(date_str, time_str):
     try:
         dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
@@ -104,7 +108,7 @@ def login_user(users_df, username, password):
     if users_df.empty:
         return False, "No users found."
 
-    username = normalize_name(username).lower()
+    username = normalize_username(username)
     password = str(password).strip()
 
     match = users_df[
@@ -122,6 +126,49 @@ def login_user(users_df, username, password):
     st.session_state.is_admin = str(user["is_admin"]).strip().lower() in ["yes", "true", "1", "admin"]
 
     return True, "Logged in successfully."
+
+
+def create_account(users_ws, users_df, display_name, username, password, confirm_password):
+    display_name = normalize_name(display_name)
+    username = normalize_username(username)
+    password = str(password).strip()
+    confirm_password = str(confirm_password).strip()
+
+    if not display_name:
+        return False, "Display name is required."
+
+    if not username:
+        return False, "Username is required."
+
+    if len(username) < 3:
+        return False, "Username must be at least 3 characters."
+
+    if not password:
+        return False, "Password is required."
+
+    if len(password) < 4:
+        return False, "Password must be at least 4 characters."
+
+    if password != confirm_password:
+        return False, "Passwords do not match."
+
+    if not users_df.empty:
+        existing = users_df[
+            users_df["username"].astype(str).str.strip().str.lower() == username
+        ]
+        if not existing.empty:
+            return False, "This username is already taken."
+
+    users_ws.append_row([
+        str(uuid.uuid4()),
+        username,
+        password,
+        display_name,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "no"
+    ])
+
+    return True, "Account created successfully. You can now log in."
 
 
 def logout_user():
@@ -311,21 +358,46 @@ def delete_event(events_ws, signups_ws, event_id):
     return "Event deleted successfully.", "success"
 
 
-def render_login(users_df):
-    st.markdown("## Login")
+def render_login_and_signup(users_ws, users_df):
+    login_col, signup_col = st.columns(2)
 
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login", use_container_width=True)
+    with login_col:
+        st.markdown("### Login")
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Login", use_container_width=True)
 
-        if submitted:
-            ok, msg = login_user(users_df, username, password)
-            if ok:
-                st.success(msg)
-                st.rerun()
-            else:
-                st.error(msg)
+            if submitted:
+                ok, msg = login_user(users_df, username, password)
+                if ok:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+    with signup_col:
+        st.markdown("### Create Account")
+        with st.form("signup_form"):
+            display_name = st.text_input("Display name")
+            new_username = st.text_input("Choose a username")
+            new_password = st.text_input("Choose a password", type="password")
+            confirm_password = st.text_input("Confirm password", type="password")
+            create_submitted = st.form_submit_button("Create Account", use_container_width=True)
+
+            if create_submitted:
+                ok, msg = create_account(
+                    users_ws,
+                    users_df,
+                    display_name,
+                    new_username,
+                    new_password,
+                    confirm_password
+                )
+                if ok:
+                    st.success(msg)
+                else:
+                    st.error(msg)
 
 
 init_session()
@@ -348,7 +420,7 @@ with top_left:
         role = "Admin" if st.session_state.is_admin else "User"
         st.success(f"Logged in as {st.session_state.display_name} ({role})")
     else:
-        st.info("Please log in to join and manage your bookings.")
+        st.info("Please log in or create an account to join and manage bookings.")
 
 with top_right:
     if st.session_state.logged_in:
@@ -356,13 +428,12 @@ with top_right:
             logout_user()
             st.rerun()
 
-tabs = ["🎈 Upcoming Events", "📋 My Bookings", "🔑 Login"]
+tabs = ["🎈 Upcoming Events", "📋 My Bookings", "🔑 Login / Sign Up"]
 if st.session_state.is_admin:
     tabs.append("🛠️ Admin")
 
 tab_objects = st.tabs(tabs)
 
-# Upcoming Events
 with tab_objects[0]:
     st.markdown("## Upcoming Events")
 
@@ -451,9 +522,8 @@ with tab_objects[0]:
                                 show_message(msg, typ)
                                 st.rerun()
                     else:
-                        st.warning("Log in to join or cancel this event.")
+                        st.warning("Log in or create an account to join this event.")
 
-# My Bookings
 with tab_objects[1]:
     st.markdown("## My Bookings")
 
@@ -496,14 +566,12 @@ with tab_objects[1]:
                             show_message(msg, typ)
                             st.rerun()
 
-# Login
 with tab_objects[2]:
     if st.session_state.logged_in:
         st.success(f"You are logged in as {st.session_state.display_name}.")
     else:
-        render_login(users_df)
+        render_login_and_signup(users_ws, users_df)
 
-# Admin
 if st.session_state.is_admin:
     with tab_objects[3]:
         st.markdown("## Admin")
