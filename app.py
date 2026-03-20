@@ -27,16 +27,6 @@ def get_category_icon(category):
     return CATEGORY_ICONS.get(str(category).strip(), "🎉")
 
 
-@st.cache_resource
-def connect_to_gsheet():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES,
-    )
-    client = gspread.authorize(creds)
-    return client.open(st.secrets["sheet_name"])
-
-
 def normalize_name(name):
     return " ".join(str(name).strip().split())
 
@@ -56,33 +46,6 @@ def ensure_columns(df, expected_columns):
             df[col] = ""
 
     return df[expected_columns]
-
-
-def load_data():
-    sheet = connect_to_gsheet()
-
-    events_ws = sheet.worksheet("events")
-    signups_ws = sheet.worksheet("signups")
-    users_ws = sheet.worksheet("users")
-
-    events_df = pd.DataFrame(events_ws.get_all_records())
-    signups_df = pd.DataFrame(signups_ws.get_all_records())
-    users_df = pd.DataFrame(users_ws.get_all_records())
-
-    events_df = ensure_columns(events_df, [
-        "event_id", "title", "category", "date", "time", "location",
-        "max_participants", "description", "status", "created_at"
-    ])
-
-    signups_df = ensure_columns(signups_df, [
-        "signup_id", "event_id", "participant_name", "signup_time", "status"
-    ])
-
-    users_df = ensure_columns(users_df, [
-        "user_id", "username", "password", "display_name", "created_at", "is_admin"
-    ])
-
-    return events_ws, signups_ws, users_ws, events_df, signups_df, users_df
 
 
 def format_event_datetime(date_str, time_str):
@@ -113,6 +76,53 @@ def init_session():
         st.session_state.display_name = ""
     if "is_admin" not in st.session_state:
         st.session_state.is_admin = False
+
+
+@st.cache_resource
+def connect_to_gsheet():
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES,
+    )
+    client = gspread.authorize(creds)
+    return client.open(st.secrets["sheet_name"])
+
+
+@st.cache_resource
+def get_worksheets():
+    sheet = connect_to_gsheet()
+    events_ws = sheet.worksheet("events")
+    signups_ws = sheet.worksheet("signups")
+    users_ws = sheet.worksheet("users")
+    return events_ws, signups_ws, users_ws
+
+
+@st.cache_data(ttl=30)
+def load_data():
+    events_ws, signups_ws, users_ws = get_worksheets()
+
+    events_df = pd.DataFrame(events_ws.get_all_records())
+    signups_df = pd.DataFrame(signups_ws.get_all_records())
+    users_df = pd.DataFrame(users_ws.get_all_records())
+
+    events_df = ensure_columns(events_df, [
+        "event_id", "title", "category", "date", "time", "location",
+        "max_participants", "description", "status", "created_at"
+    ])
+
+    signups_df = ensure_columns(signups_df, [
+        "signup_id", "event_id", "participant_name", "signup_time", "status"
+    ])
+
+    users_df = ensure_columns(users_df, [
+        "user_id", "username", "password", "display_name", "created_at", "is_admin"
+    ])
+
+    return events_df, signups_df, users_df
+
+
+def refresh_data():
+    load_data.clear()
 
 
 def login_user(users_df, username, password):
@@ -389,6 +399,7 @@ def render_login_and_signup(users_ws, users_df):
                 ok, msg = login_user(users_df, username, password)
                 if ok:
                     st.success(msg)
+                    refresh_data()
                     st.rerun()
                 else:
                     st.error(msg)
@@ -413,6 +424,7 @@ def render_login_and_signup(users_ws, users_df):
                 )
                 if ok:
                     st.success(msg)
+                    refresh_data()
                 else:
                     st.error(msg)
 
@@ -420,7 +432,8 @@ def render_login_and_signup(users_ws, users_df):
 init_session()
 
 try:
-    events_ws, signups_ws, users_ws, events_df, signups_df, users_df = load_data()
+    events_ws, signups_ws, users_ws = get_worksheets()
+    events_df, signups_df, users_df = load_data()
 except Exception as e:
     st.error("Could not load Google Sheets data.")
     st.exception(e)
@@ -430,7 +443,7 @@ st.title("🎉 Grivalia Social Hub")
 st.markdown("### Basketball, drinks, lunch plans and more")
 st.markdown("---")
 
-top_left, top_right = st.columns([3, 2])
+top_left, top_right, top_refresh = st.columns([3, 2, 1])
 
 with top_left:
     if st.session_state.logged_in:
@@ -443,7 +456,13 @@ with top_right:
     if st.session_state.logged_in:
         if st.button("Logout", use_container_width=True):
             logout_user()
+            refresh_data()
             st.rerun()
+
+with top_refresh:
+    if st.button("Refresh", use_container_width=True):
+        refresh_data()
+        st.rerun()
 
 tabs = ["🎈 Upcoming Events", "📋 My Bookings", "🔑 Login / Sign Up"]
 if st.session_state.is_admin:
@@ -526,6 +545,7 @@ with tab_objects[0]:
                                     event["max_participants"],
                                 )
                                 show_message(msg, typ)
+                                refresh_data()
                                 st.rerun()
 
                         with col_cancel:
@@ -537,6 +557,7 @@ with tab_objects[0]:
                                     st.session_state.display_name,
                                 )
                                 show_message(msg, typ)
+                                refresh_data()
                                 st.rerun()
                     else:
                         st.warning("Log in or create an account to join this event.")
@@ -581,6 +602,7 @@ with tab_objects[1]:
                         if st.button("Cancel This Booking", key=f"my_cancel_{row['event_id']}", use_container_width=True):
                             msg, typ = cancel_signup(signups_ws, row["event_id"], st.session_state.display_name)
                             show_message(msg, typ)
+                            refresh_data()
                             st.rerun()
 
 with tab_objects[2]:
@@ -616,6 +638,7 @@ if st.session_state.is_admin:
                     description,
                 )
                 show_message(msg, typ)
+                refresh_data()
                 st.rerun()
 
         st.markdown("---")
@@ -665,11 +688,13 @@ if st.session_state.is_admin:
                         edit_status,
                     )
                     show_message(msg, typ)
+                    refresh_data()
                     st.rerun()
 
                 if delete_clicked:
                     msg, typ = delete_event(events_ws, signups_ws, selected_event_id)
                     show_message(msg, typ)
+                    refresh_data()
                     st.rerun()
 
         st.markdown("---")
