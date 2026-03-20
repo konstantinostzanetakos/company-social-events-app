@@ -8,6 +8,130 @@ from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Grivalia Social Hub", page_icon="🎉", layout="wide")
 
+st.markdown("""
+<style>
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+        max-width: 1200px;
+    }
+
+    .hero-card {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-radius: 18px;
+        padding: 1.4rem 1.6rem;
+        color: white;
+        margin-bottom: 1rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+
+    .section-title {
+        font-size: 1.35rem;
+        font-weight: 800;
+        margin-top: 0.2rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .mini-note {
+        color: #475569;
+        font-size: 0.95rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .status-chip-open {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
+    }
+
+    .status-chip-warning {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
+    }
+
+    .status-chip-full {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-bottom: 0.6rem;
+    }
+
+    .event-meta {
+        color: #334155;
+        font-size: 0.97rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .soft-divider {
+        height: 1px;
+        background: linear-gradient(90deg, rgba(148,163,184,0.2), rgba(148,163,184,0.6), rgba(148,163,184,0.2));
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+        border-radius: 999px;
+    }
+
+    .stButton > button {
+        border-radius: 12px;
+        height: 2.85rem;
+        font-weight: 700;
+        border: 1px solid #cbd5e1;
+    }
+
+    .stTextInput > div > div > input,
+    .stTextArea textarea,
+    .stDateInput input,
+    .stTimeInput input,
+    .stNumberInput input {
+        border-radius: 10px !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.4rem;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 3rem;
+        white-space: nowrap;
+        border-radius: 10px 10px 0 0;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        font-weight: 700;
+    }
+
+    .small-muted {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -389,7 +513,9 @@ def render_login_and_signup(users_ws, users_df):
     login_col, signup_col = st.columns(2)
 
     with login_col:
-        st.markdown("### Login")
+        st.markdown('<div class="section-title">🔐 Login</div>', unsafe_allow_html=True)
+        st.markdown('<div class="mini-note">Welcome back. Sign in to join events and manage your plans.</div>', unsafe_allow_html=True)
+
         with st.form("login_form"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
@@ -405,7 +531,9 @@ def render_login_and_signup(users_ws, users_df):
                     st.error(msg)
 
     with signup_col:
-        st.markdown("### Create Account")
+        st.markdown('<div class="section-title">✨ Create Account</div>', unsafe_allow_html=True)
+        st.markdown('<div class="mini-note">New here? Create a quick account to join games and social plans.</div>', unsafe_allow_html=True)
+
         with st.form("signup_form"):
             display_name = st.text_input("Display name")
             new_username = st.text_input("Choose a username")
@@ -429,6 +557,15 @@ def render_login_and_signup(users_ws, users_df):
                     st.error(msg)
 
 
+def render_status_chip(spots_left):
+    if spots_left == 0:
+        st.markdown('<span class="status-chip-full">Full</span>', unsafe_allow_html=True)
+    elif spots_left <= 2:
+        st.markdown('<span class="status-chip-warning">Almost full</span>', unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="status-chip-open">Open for sign-ups</span>', unsafe_allow_html=True)
+
+
 init_session()
 
 try:
@@ -439,39 +576,51 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-st.title("🎉 Grivalia Social Hub")
-st.markdown("### Basketball, drinks, lunch plans and more")
-st.markdown("---")
+st.markdown("""
+<div class="hero-card">
+    <div class="hero-title">🎉 Grivalia Social Hub</div>
+    <p class="hero-subtitle">Internal events made simple — basketball, drinks, lunch plans and more.</p>
+</div>
+""", unsafe_allow_html=True)
 
-top_left, top_right, top_refresh = st.columns([3, 2, 1])
+top_left, top_mid, top_right = st.columns([3, 2, 1])
 
 with top_left:
     if st.session_state.logged_in:
         role = "Admin" if st.session_state.is_admin else "User"
         st.success(f"Logged in as {st.session_state.display_name} ({role})")
     else:
-        st.info("Please log in or create an account to join and manage bookings.")
+        st.info("Log in or create an account to join events and manage your bookings.")
+
+with top_mid:
+    if st.session_state.logged_in:
+        st.markdown(
+            f"<div class='small-muted'>Signed in as <strong>{st.session_state.username}</strong></div>",
+            unsafe_allow_html=True
+        )
 
 with top_right:
+    if st.button("Refresh", use_container_width=True):
+        refresh_data()
+        st.rerun()
+
+action_col1, action_col2, action_col3 = st.columns([1, 1, 4])
+with action_col1:
     if st.session_state.logged_in:
         if st.button("Logout", use_container_width=True):
             logout_user()
             refresh_data()
             st.rerun()
 
-with top_refresh:
-    if st.button("Refresh", use_container_width=True):
-        refresh_data()
-        st.rerun()
-
-tabs = ["🎈 Upcoming Events", "📋 My Bookings", "🔑 Login / Sign Up"]
+tabs = ["🎈 What’s On", "📅 Your Plans", "🔑 Login / Sign Up"]
 if st.session_state.is_admin:
     tabs.append("🛠️ Admin")
 
 tab_objects = st.tabs(tabs)
 
 with tab_objects[0]:
-    st.markdown("## Upcoming Events")
+    st.markdown('<div class="section-title">🎯 What’s happening</div>', unsafe_allow_html=True)
+    st.markdown('<div class="mini-note">Browse upcoming plans and jump in before spots run out.</div>', unsafe_allow_html=True)
 
     if events_df.empty:
         st.info("No events yet.")
@@ -501,11 +650,16 @@ with tab_objects[0]:
 
                 with st.container(border=True):
                     st.markdown(f"## {icon} {event['title']}")
-                    st.write(f"**When:** {format_event_datetime(str(event['date']), str(event['time']))}")
-                    st.write(f"**Where:** {event['location']}")
-                    st.write(f"**Category:** {event['category']}")
+                    render_status_chip(spots_left)
+
+                    st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(event['date']), str(event['time']))}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='event-meta'><strong>Where:</strong> {event['location']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='event-meta'><strong>Category:</strong> {event['category']}</div>", unsafe_allow_html=True)
+
                     if str(event["description"]).strip():
-                        st.write(f"**About:** {event['description']}")
+                        st.markdown(f"<div class='event-meta'><strong>About:</strong> {event['description']}</div>", unsafe_allow_html=True)
+
+                    st.markdown('<div class="soft-divider"></div>', unsafe_allow_html=True)
 
                     c1, c2, c3 = st.columns(3)
                     c1.metric("Confirmed", len(confirmed))
@@ -517,19 +671,23 @@ with tab_objects[0]:
                     elif my_status == "waitlist":
                         st.info("You are currently on the waitlist for this event.")
 
-                    with st.expander("🙌 Who's in"):
-                        if confirmed.empty:
-                            st.write("No confirmed attendees yet.")
-                        else:
-                            for idx, name in enumerate(confirmed["participant_name"].tolist(), start=1):
-                                st.write(f"{idx}. {name}")
+                    detail_col1, detail_col2 = st.columns(2)
 
-                    with st.expander("⏳ Waitlist"):
-                        if waitlist.empty:
-                            st.write("No one on the waitlist.")
-                        else:
-                            for idx, name in enumerate(waitlist["participant_name"].tolist(), start=1):
-                                st.write(f"{idx}. {name}")
+                    with detail_col1:
+                        with st.expander("🙌 Who's in"):
+                            if confirmed.empty:
+                                st.write("No confirmed attendees yet.")
+                            else:
+                                for idx, name in enumerate(confirmed["participant_name"].tolist(), start=1):
+                                    st.write(f"{idx}. {name}")
+
+                    with detail_col2:
+                        with st.expander("⏳ Waitlist"):
+                            if waitlist.empty:
+                                st.write("No one on the waitlist.")
+                            else:
+                                for idx, name in enumerate(waitlist["participant_name"].tolist(), start=1):
+                                    st.write(f"{idx}. {name}")
 
                     if st.session_state.logged_in:
                         col_join, col_cancel = st.columns(2)
@@ -563,7 +721,8 @@ with tab_objects[0]:
                         st.warning("Log in or create an account to join this event.")
 
 with tab_objects[1]:
-    st.markdown("## My Bookings")
+    st.markdown('<div class="section-title">📅 Your plans</div>', unsafe_allow_html=True)
+    st.markdown('<div class="mini-note">See what you’ve joined and manage your bookings in one place.</div>', unsafe_allow_html=True)
 
     if not st.session_state.logged_in:
         st.info("Log in to see your bookings.")
@@ -589,8 +748,8 @@ with tab_objects[1]:
 
                     with st.container(border=True):
                         st.markdown(f"### {icon} {row.get('title', 'Unknown Event')}")
-                        st.write(f"**When:** {format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}")
-                        st.write(f"**Where:** {row.get('location', '')}")
+                        st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='event-meta'><strong>Where:</strong> {row.get('location', '')}</div>", unsafe_allow_html=True)
 
                         if status == "confirmed":
                             st.success("Confirmed")
@@ -608,12 +767,14 @@ with tab_objects[1]:
 with tab_objects[2]:
     if st.session_state.logged_in:
         st.success(f"You are logged in as {st.session_state.display_name}.")
+        st.markdown('<div class="mini-note">You can now join events, manage your plans, and keep track of your status.</div>', unsafe_allow_html=True)
     else:
         render_login_and_signup(users_ws, users_df)
 
 if st.session_state.is_admin:
     with tab_objects[3]:
-        st.markdown("## Admin")
+        st.markdown('<div class="section-title">🛠️ Admin area</div>', unsafe_allow_html=True)
+        st.markdown('<div class="mini-note">Create events, update details, and manage the event calendar.</div>', unsafe_allow_html=True)
 
         st.subheader("Create Event")
         with st.form("create_event_form"):
