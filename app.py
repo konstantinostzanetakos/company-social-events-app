@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="Grivalia Social Hub", page_icon="🎉", layout="wide")
+st.set_page_config(page_title="Grivalia Social Hub", page_icon="🏘️", layout="wide")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
