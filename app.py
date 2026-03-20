@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="Grivalia Social Hub", page_icon="🏘️", layout="wide")
+st.set_page_config(page_title="Grivalia Social Hub", page_icon="🎉", layout="wide")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -24,7 +24,7 @@ CATEGORY_ICONS = {
 
 
 def get_category_icon(category):
-    return CATEGORY_ICONS.get(category, "🎉")
+    return CATEGORY_ICONS.get(str(category).strip(), "🎉")
 
 
 @st.cache_resource
@@ -37,8 +37,30 @@ def connect_to_gsheet():
     return client.open(st.secrets["sheet_name"])
 
 
+def normalize_name(name):
+    return " ".join(str(name).strip().split())
+
+
+def normalize_username(username):
+    return normalize_name(username).replace(" ", "").lower()
+
+
+def ensure_columns(df, expected_columns):
+    if df.empty:
+        return pd.DataFrame(columns=expected_columns)
+
+    df.columns = [str(c).strip() for c in df.columns]
+
+    for col in expected_columns:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df[expected_columns]
+
+
 def load_data():
     sheet = connect_to_gsheet()
+
     events_ws = sheet.worksheet("events")
     signups_ws = sheet.worksheet("signups")
     users_ws = sheet.worksheet("users")
@@ -47,31 +69,20 @@ def load_data():
     signups_df = pd.DataFrame(signups_ws.get_all_records())
     users_df = pd.DataFrame(users_ws.get_all_records())
 
-    if events_df.empty:
-        events_df = pd.DataFrame(columns=[
-            "event_id", "title", "category", "date", "time", "location",
-            "max_participants", "description", "status", "created_at"
-        ])
+    events_df = ensure_columns(events_df, [
+        "event_id", "title", "category", "date", "time", "location",
+        "max_participants", "description", "status", "created_at"
+    ])
 
-    if signups_df.empty:
-        signups_df = pd.DataFrame(columns=[
-            "signup_id", "event_id", "participant_name", "signup_time", "status"
-        ])
+    signups_df = ensure_columns(signups_df, [
+        "signup_id", "event_id", "participant_name", "signup_time", "status"
+    ])
 
-    if users_df.empty:
-        users_df = pd.DataFrame(columns=[
-            "user_id", "username", "password", "display_name", "created_at", "is_admin"
-        ])
+    users_df = ensure_columns(users_df, [
+        "user_id", "username", "password", "display_name", "created_at", "is_admin"
+    ])
 
     return events_ws, signups_ws, users_ws, events_df, signups_df, users_df
-
-
-def normalize_name(name):
-    return " ".join(str(name).strip().split())
-
-
-def normalize_username(username):
-    return normalize_name(username).replace(" ", "").lower()
 
 
 def format_event_datetime(date_str, time_str):
@@ -105,16 +116,22 @@ def init_session():
 
 
 def login_user(users_df, username, password):
+    required_cols = ["username", "password", "display_name", "is_admin"]
+    missing_cols = [col for col in required_cols if col not in users_df.columns]
+
+    if missing_cols:
+        return False, f"Users sheet is missing columns: {', '.join(missing_cols)}"
+
     if users_df.empty:
         return False, "No users found."
 
     username = normalize_username(username)
     password = str(password).strip()
 
-    match = users_df[
-        (users_df["username"].astype(str).str.strip().str.lower() == username) &
-        (users_df["password"].astype(str).str.strip() == password)
-    ]
+    usernames = users_df["username"].astype(str).str.strip().str.lower()
+    passwords = users_df["password"].astype(str).str.strip()
+
+    match = users_df[(usernames == username) & (passwords == password)]
 
     if match.empty:
         return False, "Invalid username or password."
