@@ -319,7 +319,7 @@ with tab2:
 
     admin_password_input = st.text_input("Enter admin password", type="password")
 
-    if admin_password_input == st.secrets["admin_password"]:
+        if admin_password_input == st.secrets["admin_password"]:
         st.success("Admin access granted.")
 
         try:
@@ -352,25 +352,9 @@ with tab2:
                     if msg_type == "success":
                         st.rerun()
 
-            st.markdown("### 🛠️ Manage events")
-
-            if events_df.empty:
-                st.info("No events created yet.")
-            else:
-                for _, event in events_df.sort_values(by=["date", "time"], ascending=True).iterrows():
-                    icon = get_category_icon(event["category"])
-                    with st.container(border=True):
-                        st.markdown(f"**{icon} {event['title']}**")
-                        st.write(format_event_datetime(str(event["date"]), str(event["time"])))
-                        st.write(f"Location: {event['location']}")
-                        st.write(f"Status: {event['status']}")
-
-                        if event["status"] == "open":
-                            if st.button("Close Event", key=f"close_{event['event_id']}"):
-                                message, msg_type = close_event(events_ws, event["event_id"])
-                                show_message(message, msg_type)
-                                if msg_type == "success":
-                                    st.rerun()
+        except Exception as e:
+            st.error("Something went wrong in the admin section.")
+            st.exception(e)
 
     elif admin_password_input:
         st.error("Wrong password.")
