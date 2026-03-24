@@ -1,3 +1,4 @@
+import random
 import uuid
 from datetime import datetime
 
@@ -97,6 +98,31 @@ st.markdown("""
         border-radius: 999px;
     }
 
+    .team-box-blue {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .team-box-red {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
+        padding: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .payment-box {
+        background: #faf5ff;
+        border: 1px solid #e9d5ff;
+        border-radius: 12px;
+        padding: 0.9rem;
+        margin-top: 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+
     .stButton > button {
         border-radius: 12px;
         height: 2.85rem;
@@ -145,6 +171,9 @@ CATEGORY_ICONS = {
     "Padel": "🎾",
     "Other": "🎉",
 }
+
+SPORT_CATEGORIES = ["Basketball", "Football", "Padel"]
+PAYMENT_OPTIONS = ["IRIS", "IBAN (Eurobank)", "Revolut", "Cash"]
 
 
 def get_category_icon(category):
@@ -231,7 +260,9 @@ def load_data():
 
     events_df = ensure_columns(events_df, [
         "event_id", "title", "category", "date", "time", "location",
-        "max_participants", "description", "status", "created_at"
+        "max_participants", "description", "status", "created_at",
+        "is_paid", "price", "payment_methods", "payment_details",
+        "signups_open", "teams_generated", "teams_data"
     ])
 
     signups_df = ensure_columns(signups_df, [
@@ -441,7 +472,20 @@ def cancel_signup(signups_ws, event_id, participant_name):
     return "Your booking has been cancelled.", "success"
 
 
-def add_event(events_ws, title, category, date_value, time_value, location, max_participants, description):
+def add_event(
+    events_ws,
+    title,
+    category,
+    date_value,
+    time_value,
+    location,
+    max_participants,
+    description,
+    is_paid,
+    price,
+    payment_methods,
+    payment_details
+):
     if not normalize_name(title):
         return "Title is required.", "warning"
 
@@ -456,17 +500,42 @@ def add_event(events_ws, title, category, date_value, time_value, location, max_
         str(description).strip(),
         "open",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "yes" if is_paid else "no",
+        float(price) if is_paid else "",
+        ",".join(payment_methods) if is_paid else "",
+        str(payment_details).strip() if is_paid else "",
+        "open",
+        "no",
+        ""
     ])
 
     return "Event created successfully.", "success"
 
 
-def update_event(events_ws, event_id, title, category, date_value, time_value, location, max_participants, description, status):
+def update_event(
+    events_ws,
+    event_id,
+    title,
+    category,
+    date_value,
+    time_value,
+    location,
+    max_participants,
+    description,
+    status,
+    is_paid,
+    price,
+    payment_methods,
+    payment_details,
+    signups_open,
+    teams_generated,
+    teams_data
+):
     records = events_ws.get_all_records()
 
     for i, row in enumerate(records, start=2):
         if str(row.get("event_id", "")).strip() == str(event_id):
-            events_ws.update(f"A{i}:J{i}", [[
+            events_ws.update(f"A{i}:Q{i}", [[
                 event_id,
                 normalize_name(title),
                 category,
@@ -477,6 +546,13 @@ def update_event(events_ws, event_id, title, category, date_value, time_value, l
                 str(description).strip(),
                 status,
                 row.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                "yes" if is_paid else "no",
+                float(price) if is_paid else "",
+                ",".join(payment_methods) if is_paid else "",
+                str(payment_details).strip() if is_paid else "",
+                signups_open,
+                teams_generated,
+                teams_data
             ]])
             return "Event updated successfully.", "success"
 
@@ -507,6 +583,34 @@ def delete_event(events_ws, signups_ws, event_id):
     events_ws.delete_rows(event_row)
 
     return "Event deleted successfully.", "success"
+
+
+def generate_teams_data(player_names):
+    players = [normalize_name(p) for p in player_names if normalize_name(p)]
+    if len(players) < 2:
+        return None
+
+    random.shuffle(players)
+    half = len(players) // 2
+    blue = players[:half]
+    red = players[half:]
+
+    return f"Blue:{','.join(blue)}|Red:{','.join(red)}"
+
+
+def parse_teams_data(teams_data):
+    if not str(teams_data).strip() or "|" not in str(teams_data):
+        return [], []
+
+    blue_part, red_part = str(teams_data).split("|", 1)
+
+    blue_players = blue_part.replace("Blue:", "").split(",")
+    red_players = red_part.replace("Red:", "").split(",")
+
+    blue_players = [p.strip() for p in blue_players if p.strip()]
+    red_players = [p.strip() for p in red_players if p.strip()]
+
+    return blue_players, red_players
 
 
 def render_login_and_signup(users_ws, users_df):
@@ -648,9 +752,16 @@ with tab_objects[0]:
                 if st.session_state.logged_in:
                     my_status = user_signup_status(signups_df, event_id, st.session_state.display_name)
 
+                signups_open = str(event.get("signups_open", "open")).strip().lower() == "open"
+                teams_generated = str(event.get("teams_generated", "no")).strip().lower() == "yes"
+                is_paid = str(event.get("is_paid", "no")).strip().lower() == "yes"
+
                 with st.container(border=True):
                     st.markdown(f"## {icon} {event['title']}")
                     render_status_chip(spots_left)
+
+                    if not signups_open:
+                        st.warning("Signups are closed for this event.")
 
                     st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(event['date']), str(event['time']))}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='event-meta'><strong>Where:</strong> {event['location']}</div>", unsafe_allow_html=True)
@@ -658,6 +769,23 @@ with tab_objects[0]:
 
                     if str(event["description"]).strip():
                         st.markdown(f"<div class='event-meta'><strong>About:</strong> {event['description']}</div>", unsafe_allow_html=True)
+
+                    if is_paid:
+                        st.markdown(f"""
+                        <div class="payment-box">
+                            <strong>💰 Paid Event</strong><br>
+                            Price per person: €{event.get("price", "")}
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        payment_methods = [m.strip() for m in str(event.get("payment_methods", "")).split(",") if m.strip()]
+                        if payment_methods:
+                            st.markdown("**Payment options:**")
+                            for method in payment_methods:
+                                st.write(f"• {method}")
+
+                        if str(event.get("payment_details", "")).strip():
+                            st.info(str(event.get("payment_details", "")))
 
                     st.markdown('<div class="soft-divider"></div>', unsafe_allow_html=True)
 
@@ -670,6 +798,22 @@ with tab_objects[0]:
                         st.success("You are confirmed for this event.")
                     elif my_status == "waitlist":
                         st.info("You are currently on the waitlist for this event.")
+
+                    if teams_generated and str(event.get("teams_data", "")).strip():
+                        blue_players, red_players = parse_teams_data(event.get("teams_data", ""))
+
+                        st.markdown("### 🔥 Teams are ready")
+                        team_col1, team_col2 = st.columns(2)
+
+                        with team_col1:
+                            st.markdown('<div class="team-box-blue"><strong>🔵 Team Blue</strong></div>', unsafe_allow_html=True)
+                            for p in blue_players:
+                                st.write(f"• {p}")
+
+                        with team_col2:
+                            st.markdown('<div class="team-box-red"><strong>🔴 Team Red</strong></div>', unsafe_allow_html=True)
+                            for p in red_players:
+                                st.write(f"• {p}")
 
                     detail_col1, detail_col2 = st.columns(2)
 
@@ -693,7 +837,7 @@ with tab_objects[0]:
                         col_join, col_cancel = st.columns(2)
 
                         with col_join:
-                            join_disabled = my_status is not None
+                            join_disabled = my_status is not None or not signups_open
                             if st.button("Join Event", key=f"join_{event_id}", use_container_width=True, disabled=join_disabled):
                                 msg, typ = signup_user(
                                     signups_ws,
@@ -751,6 +895,9 @@ with tab_objects[1]:
                         st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='event-meta'><strong>Where:</strong> {row.get('location', '')}</div>", unsafe_allow_html=True)
 
+                        if str(row.get("is_paid", "no")).strip().lower() == "yes":
+                            st.write(f"💰 Paid event — €{row.get('price', '')} per person")
+
                         if status == "confirmed":
                             st.success("Confirmed")
                         elif status == "waitlist":
@@ -774,7 +921,7 @@ with tab_objects[2]:
 if st.session_state.is_admin:
     with tab_objects[3]:
         st.markdown('<div class="section-title">🛠️ Admin area</div>', unsafe_allow_html=True)
-        st.markdown('<div class="mini-note">Create events, update details, and manage the event calendar.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="mini-note">Create events, update details, manage payments, close signups, and create teams.</div>', unsafe_allow_html=True)
 
         st.subheader("Create Event")
         with st.form("create_event_form"):
@@ -785,6 +932,13 @@ if st.session_state.is_admin:
             location = st.text_input("Location")
             max_participants = st.number_input("Max participants", min_value=1, step=1, value=10)
             description = st.text_area("Description")
+
+            st.markdown("### Payment settings")
+            create_is_paid = st.checkbox("Paid event")
+            create_price = st.number_input("Price (€)", min_value=0.0, step=1.0, value=0.0)
+            create_payment_methods = st.multiselect("Payment methods", PAYMENT_OPTIONS)
+            create_payment_details = st.text_area("Payment details / instructions")
+
             submitted = st.form_submit_button("Create Event", use_container_width=True)
 
             if submitted:
@@ -797,13 +951,17 @@ if st.session_state.is_admin:
                     location,
                     max_participants,
                     description,
+                    create_is_paid,
+                    create_price,
+                    create_payment_methods,
+                    create_payment_details,
                 )
                 show_message(msg, typ)
                 refresh_data()
                 st.rerun()
 
         st.markdown("---")
-        st.subheader("Edit or Delete Event")
+        st.subheader("Edit, Payments, Signups & Teams")
 
         if events_df.empty:
             st.info("No events available.")
@@ -816,6 +974,12 @@ if st.session_state.is_admin:
             selected_label = st.selectbox("Select event", list(event_options.keys()))
             selected_event_id = event_options[selected_label]
             selected_event = events_df[events_df["event_id"].astype(str) == str(selected_event_id)].iloc[0]
+
+            current_payment_methods = [
+                m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()
+            ]
+            current_is_paid = str(selected_event.get("is_paid", "no")).strip().lower() == "yes"
+            current_signups_open = str(selected_event.get("signups_open", "open")).strip().lower()
 
             with st.form("edit_event_form"):
                 edit_title = st.text_input("Title", value=str(selected_event["title"]))
@@ -830,6 +994,31 @@ if st.session_state.is_admin:
                 edit_max = st.number_input("Max participants", min_value=1, step=1, value=int(selected_event["max_participants"]))
                 edit_description = st.text_area("Description", value=str(selected_event["description"]))
                 edit_status = st.selectbox("Status", ["open", "closed"], index=0 if str(selected_event["status"]).strip().lower() == "open" else 1)
+
+                st.markdown("### Payment settings")
+                edit_is_paid = st.checkbox("Paid event", value=current_is_paid)
+                edit_price = st.number_input(
+                    "Price (€)",
+                    min_value=0.0,
+                    step=1.0,
+                    value=float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0
+                )
+                edit_payment_methods = st.multiselect(
+                    "Payment methods",
+                    PAYMENT_OPTIONS,
+                    default=[m for m in current_payment_methods if m in PAYMENT_OPTIONS]
+                )
+                edit_payment_details = st.text_area(
+                    "Payment details / instructions",
+                    value=str(selected_event.get("payment_details", ""))
+                )
+
+                st.markdown("### Signup settings")
+                edit_signups_open = st.selectbox(
+                    "Signups",
+                    ["open", "closed"],
+                    index=0 if current_signups_open == "open" else 1
+                )
 
                 col_save, col_delete = st.columns(2)
                 save_clicked = col_save.form_submit_button("Save Changes", use_container_width=True)
@@ -847,6 +1036,13 @@ if st.session_state.is_admin:
                         edit_max,
                         edit_description,
                         edit_status,
+                        edit_is_paid,
+                        edit_price,
+                        edit_payment_methods,
+                        edit_payment_details,
+                        edit_signups_open,
+                        str(selected_event.get("teams_generated", "no")),
+                        str(selected_event.get("teams_data", ""))
                     )
                     show_message(msg, typ)
                     refresh_data()
@@ -857,6 +1053,136 @@ if st.session_state.is_admin:
                     show_message(msg, typ)
                     refresh_data()
                     st.rerun()
+
+            if str(selected_event.get("category", "")) in SPORT_CATEGORIES:
+                st.markdown("---")
+                st.subheader("Team Management")
+
+                confirmed_for_event, _ = get_event_signups(signups_df, selected_event_id)
+                current_players = confirmed_for_event["participant_name"].tolist() if not confirmed_for_event.empty else []
+
+                st.write(f"Confirmed players available for teams: **{len(current_players)}**")
+
+                current_teams_generated = str(selected_event.get("teams_generated", "no")).strip().lower() == "yes"
+                current_teams_data = str(selected_event.get("teams_data", "")).strip()
+
+                if current_teams_generated and current_teams_data:
+                    blue_players, red_players = parse_teams_data(current_teams_data)
+
+                    tc1, tc2 = st.columns(2)
+                    with tc1:
+                        st.markdown('<div class="team-box-blue"><strong>🔵 Current Team Blue</strong></div>', unsafe_allow_html=True)
+                        for p in blue_players:
+                            st.write(f"• {p}")
+
+                    with tc2:
+                        st.markdown('<div class="team-box-red"><strong>🔴 Current Team Red</strong></div>', unsafe_allow_html=True)
+                        for p in red_players:
+                            st.write(f"• {p}")
+
+                team_col1, team_col2 = st.columns(2)
+
+                with team_col1:
+                    if st.button("Generate Teams Automatically", use_container_width=True):
+                        teams_data = generate_teams_data(current_players)
+
+                        if not teams_data:
+                            st.warning("Not enough confirmed players to generate teams.")
+                        else:
+                            msg, typ = update_event(
+                                events_ws,
+                                selected_event_id,
+                                selected_event["title"],
+                                selected_event["category"],
+                                pd.to_datetime(selected_event["date"]).date(),
+                                pd.to_datetime(str(selected_event["time"]), format="%H:%M").time(),
+                                selected_event["location"],
+                                int(selected_event["max_participants"]),
+                                selected_event["description"],
+                                selected_event["status"],
+                                str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
+                                float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                                [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
+                                str(selected_event.get("payment_details", "")),
+                                str(selected_event.get("signups_open", "open")),
+                                "yes",
+                                teams_data
+                            )
+                            show_message("Teams generated successfully.", "success")
+                            refresh_data()
+                            st.rerun()
+
+                with team_col2:
+                    if st.button("Clear Teams", use_container_width=True):
+                        msg, typ = update_event(
+                            events_ws,
+                            selected_event_id,
+                            selected_event["title"],
+                            selected_event["category"],
+                            pd.to_datetime(selected_event["date"]).date(),
+                            pd.to_datetime(str(selected_event["time"]), format="%H:%M").time(),
+                            selected_event["location"],
+                            int(selected_event["max_participants"]),
+                            selected_event["description"],
+                            selected_event["status"],
+                            str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
+                            float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                            [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
+                            str(selected_event.get("payment_details", "")),
+                            str(selected_event.get("signups_open", "open")),
+                            "no",
+                            ""
+                        )
+                        show_message("Teams cleared successfully.", "success")
+                        refresh_data()
+                        st.rerun()
+
+                st.markdown("### Manual Teams")
+                st.markdown('<div class="mini-note">Enter names separated by commas.</div>', unsafe_allow_html=True)
+
+                manual_blue_default = ""
+                manual_red_default = ""
+                if current_teams_generated and current_teams_data:
+                    current_blue, current_red = parse_teams_data(current_teams_data)
+                    manual_blue_default = ", ".join(current_blue)
+                    manual_red_default = ", ".join(current_red)
+
+                with st.form("manual_teams_form"):
+                    manual_blue = st.text_area("Team Blue", value=manual_blue_default)
+                    manual_red = st.text_area("Team Red", value=manual_red_default)
+                    manual_save = st.form_submit_button("Save Manual Teams", use_container_width=True)
+
+                    if manual_save:
+                        blue_players = [normalize_name(x) for x in manual_blue.split(",") if normalize_name(x)]
+                        red_players = [normalize_name(x) for x in manual_red.split(",") if normalize_name(x)]
+
+                        if not blue_players or not red_players:
+                            st.warning("Both teams must have at least one player.")
+                        else:
+                            manual_teams_data = f"Blue:{','.join(blue_players)}|Red:{','.join(red_players)}"
+
+                            msg, typ = update_event(
+                                events_ws,
+                                selected_event_id,
+                                selected_event["title"],
+                                selected_event["category"],
+                                pd.to_datetime(selected_event["date"]).date(),
+                                pd.to_datetime(str(selected_event["time"]), format="%H:%M").time(),
+                                selected_event["location"],
+                                int(selected_event["max_participants"]),
+                                selected_event["description"],
+                                selected_event["status"],
+                                str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
+                                float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                                [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
+                                str(selected_event.get("payment_details", "")),
+                                str(selected_event.get("signups_open", "open")),
+                                "yes",
+                                manual_teams_data
+                            )
+                            show_message("Manual teams saved successfully.", "success")
+                            refresh_data()
+                            st.rerun()
 
         st.markdown("---")
         st.subheader("All Signups")
