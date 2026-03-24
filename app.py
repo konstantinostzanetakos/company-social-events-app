@@ -1,3 +1,5 @@
+import os
+import json
 import random
 import uuid
 from datetime import datetime
@@ -219,7 +221,6 @@ def parse_price(value):
 
     raw = raw.replace("€", "").replace(" ", "")
 
-    # Handle both comma and dot decimals safely
     if "," in raw and "." in raw:
         raw = raw.replace(",", "")
     elif "," in raw and "." not in raw:
@@ -262,12 +263,23 @@ def init_session():
 
 @st.cache_resource
 def connect_to_gsheet():
+    service_account_raw = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+    sheet_key = os.getenv("GOOGLE_SHEET_ID")
+
+    if not service_account_raw:
+        raise ValueError("Missing GOOGLE_SERVICE_ACCOUNT_JSON.")
+
+    if not sheet_key:
+        raise ValueError("Missing GOOGLE_SHEET_ID.")
+
+    creds_info = json.loads(service_account_raw)
+
     creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
+        creds_info,
         scopes=SCOPES,
     )
     client = gspread.authorize(creds)
-    return client.open(st.secrets["sheet_name"])
+    return client.open_by_key(sheet_key)
 
 
 @st.cache_resource
