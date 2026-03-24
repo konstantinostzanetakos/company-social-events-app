@@ -28,7 +28,7 @@ st.markdown("""
         background:
             radial-gradient(circle at top right, rgba(96,165,250,0.22), transparent 28%),
             radial-gradient(circle at bottom left, rgba(139,92,246,0.16), transparent 22%),
-            linear-gradient(135deg, #0f172a 0%, #111827 45%, #1e293b 100%);
+            linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #60a5fa 100%);
         border-radius: 24px;
         padding: 1.8rem 1.8rem 1.5rem 1.8rem;
         color: white;
