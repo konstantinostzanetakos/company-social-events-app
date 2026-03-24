@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 from google.oauth2.service_account import Credentials
 
-st.set_page_config(page_title="Grivalia Social Hub", page_icon="🎉", layout="wide")
+st.set_page_config(page_title="Grivalia Social Hub", page_icon="💬", layout="wide")
 st.set_option("client.showErrorDetails", False)
 
 st.markdown("""
@@ -929,8 +929,8 @@ total_users = 0 if users_df.empty else len(users_df)
 st.markdown(f"""
 <div class="hero-wrap">
     <div class="hero-kicker">Internal community platform</div>
-    <div class="hero-title">🎉 Grivalia Social Hub</div>
-    <div class="hero-subtitle">A cleaner way to organize sports, drinks, lunches, and internal social plans — all in one place.</div>
+    <div class="hero-title">Grivalia Social Hub</div>
+    <div class="hero-subtitle">Our way to organize sports, drinks, lunches, and social plans — all in one place.</div>
     <div class="hero-stats">
         <div class="hero-stat">
             <div class="hero-stat-label">Open events</div>
