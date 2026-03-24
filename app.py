@@ -864,9 +864,17 @@ def render_status_pill(spots_left):
 
 
 def render_login_and_signup(users_ws, users_df):
+    st.markdown(f"""
+    <div class="hero-wrap">
+        <div class="hero-kicker">Private employee access</div>
+        <div class="hero-title">Grivalia Social Hub</div>
+        <div class="hero-subtitle">Please log in or create an account to access the internal events platform.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Access your account</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-subtitle">Log in to join plans or create a new account in seconds.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">Only signed-in users can view events, plans, and bookings.</div>', unsafe_allow_html=True)
 
     login_col, signup_col = st.columns(2)
 
@@ -922,6 +930,10 @@ except Exception:
     st.error("Could not load Google Sheets data.")
     st.stop()
 
+if not st.session_state.logged_in:
+    render_login_and_signup(users_ws, users_df)
+    st.stop()
+
 total_open_events = 0 if events_df.empty else len(events_df[events_df["status"].astype(str).str.lower() == "open"])
 total_signups = 0 if signups_df.empty else len(signups_df)
 total_users = 0 if users_df.empty else len(users_df)
@@ -951,24 +963,18 @@ st.markdown(f"""
 top_left, top_mid, top_right = st.columns([3, 2, 1])
 
 with top_left:
-    if st.session_state.logged_in:
-        role_chip = "chip-admin" if st.session_state.is_admin else "chip-user"
-        role_text = "Admin" if st.session_state.is_admin else "User"
-        st.markdown(
-            f'<span class="top-chip {role_chip}">Signed in as {st.session_state.display_name} · {role_text}</span>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown('<span class="top-chip chip-guest">Browsing as guest</span>', unsafe_allow_html=True)
+    role_chip = "chip-admin" if st.session_state.is_admin else "chip-user"
+    role_text = "Admin" if st.session_state.is_admin else "User"
+    st.markdown(
+        f'<span class="top-chip {role_chip}">Signed in as {st.session_state.display_name} · {role_text}</span>',
+        unsafe_allow_html=True
+    )
 
 with top_mid:
-    if st.session_state.logged_in:
-        st.markdown(
-            f"<div class='small-muted'>Username: <strong>{st.session_state.username}</strong></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown("<div class='small-muted'>Log in to join events and manage bookings.</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='small-muted'>Username: <strong>{st.session_state.username}</strong></div>",
+        unsafe_allow_html=True
+    )
 
 with top_right:
     if st.button("Refresh", use_container_width=True):
@@ -977,13 +983,12 @@ with top_right:
 
 action_col1, action_col2, action_col3 = st.columns([1, 1, 4])
 with action_col1:
-    if st.session_state.logged_in:
-        if st.button("Logout", use_container_width=True):
-            logout_user()
-            refresh_data()
-            st.rerun()
+    if st.button("Logout", use_container_width=True):
+        logout_user()
+        refresh_data()
+        st.rerun()
 
-tabs = ["🎈 What’s On", "📅 Your Plans", "🔑 Login / Sign Up"]
+tabs = ["🎈 What’s On", "📅 Your Plans"]
 if st.session_state.is_admin:
     tabs.append("🛠️ Admin")
 
@@ -1018,9 +1023,7 @@ with tab_objects[0]:
                 confirmed, waitlist = get_event_signups(signups_df, event_id)
                 spots_left = max(int(event["max_participants"]) - len(confirmed), 0)
 
-                my_status = None
-                if st.session_state.logged_in:
-                    my_status = user_signup_status(signups_df, event_id, st.session_state.display_name)
+                my_status = user_signup_status(signups_df, event_id, st.session_state.display_name)
 
                 signups_open = str(event.get("signups_open", "open")).strip().lower() == "open"
                 teams_generated = str(event.get("teams_generated", "no")).strip().lower() == "yes"
@@ -1149,36 +1152,33 @@ with tab_objects[0]:
                             for idx, name in enumerate(waitlist["participant_name"].tolist(), start=1):
                                 st.write(f"{idx}. {name}")
 
-                if st.session_state.logged_in:
-                    col_join, col_cancel = st.columns(2)
+                col_join, col_cancel = st.columns(2)
 
-                    with col_join:
-                        join_disabled = my_status is not None or not signups_open
-                        if st.button("Join Event", key=f"join_{event_id}", use_container_width=True, disabled=join_disabled):
-                            msg, typ = signup_user(
-                                signups_ws,
-                                signups_df,
-                                event_id,
-                                st.session_state.display_name,
-                                event["max_participants"],
-                            )
-                            show_message(msg, typ)
-                            refresh_data()
-                            st.rerun()
+                with col_join:
+                    join_disabled = my_status is not None or not signups_open
+                    if st.button("Join Event", key=f"join_{event_id}", use_container_width=True, disabled=join_disabled):
+                        msg, typ = signup_user(
+                            signups_ws,
+                            signups_df,
+                            event_id,
+                            st.session_state.display_name,
+                            event["max_participants"],
+                        )
+                        show_message(msg, typ)
+                        refresh_data()
+                        st.rerun()
 
-                    with col_cancel:
-                        cancel_disabled = my_status is None
-                        if st.button("Cancel Booking", key=f"cancel_{event_id}", use_container_width=True, disabled=cancel_disabled):
-                            msg, typ = cancel_signup(
-                                signups_ws,
-                                event_id,
-                                st.session_state.display_name,
-                            )
-                            show_message(msg, typ)
-                            refresh_data()
-                            st.rerun()
-                else:
-                    st.warning("Log in or create an account to join this event.")
+                with col_cancel:
+                    cancel_disabled = my_status is None
+                    if st.button("Cancel Booking", key=f"cancel_{event_id}", use_container_width=True, disabled=cancel_disabled):
+                        msg, typ = cancel_signup(
+                            signups_ws,
+                            event_id,
+                            st.session_state.display_name,
+                        )
+                        show_message(msg, typ)
+                        refresh_data()
+                        st.rerun()
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1189,75 +1189,63 @@ with tab_objects[1]:
     st.markdown('<div class="section-title">Your plans</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-subtitle">Track what you have joined and manage your bookings in one place.</div>', unsafe_allow_html=True)
 
-    if not st.session_state.logged_in:
-        st.info("Log in to see your bookings.")
-    else:
-        my_name = st.session_state.display_name
-        my_signups = signups_df[
-            signups_df["participant_name"].astype(str).str.strip().str.lower() == my_name.lower()
-        ].copy() if not signups_df.empty else pd.DataFrame()
+    my_name = st.session_state.display_name
+    my_signups = signups_df[
+        signups_df["participant_name"].astype(str).str.strip().str.lower() == my_name.lower()
+    ].copy() if not signups_df.empty else pd.DataFrame()
 
-        if my_signups.empty:
+    if my_signups.empty:
+        st.info("You have no bookings yet.")
+    else:
+        merged = my_signups.merge(events_df, on="event_id", how="left", suffixes=("_signup", "_event"))
+
+        if merged.empty:
             st.info("You have no bookings yet.")
         else:
-            merged = my_signups.merge(events_df, on="event_id", how="left", suffixes=("_signup", "_event"))
+            merged = merged.sort_values(by=["date", "time"], ascending=True)
 
-            if merged.empty:
-                st.info("You have no bookings yet.")
-            else:
-                merged = merged.sort_values(by=["date", "time"], ascending=True)
+            for _, row in merged.iterrows():
+                icon = get_category_icon(str(row.get("category", "Other")))
+                status = str(row.get("status_signup", "")).strip()
 
-                for _, row in merged.iterrows():
-                    icon = get_category_icon(str(row.get("category", "Other")))
-                    status = str(row.get("status_signup", "")).strip()
+                st.markdown('<div class="event-card">', unsafe_allow_html=True)
+                st.markdown(f'<div class="event-title">{icon} {row.get("title", "Unknown Event")}</div>', unsafe_allow_html=True)
 
-                    st.markdown('<div class="event-card">', unsafe_allow_html=True)
-                    st.markdown(f'<div class="event-title">{icon} {row.get("title", "Unknown Event")}</div>', unsafe_allow_html=True)
-
-                    st.markdown(f"""
-                    <div class="event-grid">
-                        <div class="meta-card">
-                            <div class="meta-label">When</div>
-                            <div class="meta-value">{format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>
-                        </div>
-                        <div class="meta-card">
-                            <div class="meta-label">Where</div>
-                            <div class="meta-value">{row.get('location', '')}</div>
-                        </div>
+                st.markdown(f"""
+                <div class="event-grid">
+                    <div class="meta-card">
+                        <div class="meta-label">When</div>
+                        <div class="meta-value">{format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <div class="meta-card">
+                        <div class="meta-label">Where</div>
+                        <div class="meta-value">{row.get('location', '')}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                    if str(row.get("is_paid", "no")).strip().lower() == "yes":
-                        st.write(f"💰 Paid event — €{format_price(row.get('price', ''))} per person")
+                if str(row.get("is_paid", "no")).strip().lower() == "yes":
+                    st.write(f"💰 Paid event — €{format_price(row.get('price', ''))} per person")
 
-                    if status == "confirmed":
-                        st.success("Confirmed")
-                    elif status == "waitlist":
-                        st.info("On waitlist")
-                    else:
-                        st.write(status)
+                if status == "confirmed":
+                    st.success("Confirmed")
+                elif status == "waitlist":
+                    st.info("On waitlist")
+                else:
+                    st.write(status)
 
-                    if st.button("Cancel This Booking", key=f"my_cancel_{row['event_id']}", use_container_width=True):
-                        msg, typ = cancel_signup(signups_ws, row["event_id"], st.session_state.display_name)
-                        show_message(msg, typ)
-                        refresh_data()
-                        st.rerun()
+                if st.button("Cancel This Booking", key=f"my_cancel_{row['event_id']}", use_container_width=True):
+                    msg, typ = cancel_signup(signups_ws, row["event_id"], st.session_state.display_name)
+                    show_message(msg, typ)
+                    refresh_data()
+                    st.rerun()
 
-                    st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tab_objects[2]:
-    if st.session_state.logged_in:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown(f'<div class="section-title">Welcome back, {st.session_state.display_name}</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-subtitle">You are already signed in and ready to join or manage events.</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        render_login_and_signup(users_ws, users_df)
-
 if st.session_state.is_admin:
-    with tab_objects[3]:
+    with tab_objects[2]:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="section-title">Admin area</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-subtitle">Create events, update details, manage signups, payment options, and teams.</div>', unsafe_allow_html=True)
