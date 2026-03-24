@@ -15,148 +15,326 @@ st.set_option("client.showErrorDetails", False)
 st.markdown("""
 <style>
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 2rem;
-        max-width: 1200px;
+        max-width: 1280px;
     }
 
-    .hero-card {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        border-radius: 18px;
-        padding: 1.4rem 1.6rem;
+    .main {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    }
+
+    .hero-wrap {
+        background:
+            radial-gradient(circle at top right, rgba(96,165,250,0.22), transparent 28%),
+            radial-gradient(circle at bottom left, rgba(139,92,246,0.16), transparent 22%),
+            linear-gradient(135deg, #0f172a 0%, #111827 45%, #1e293b 100%);
+        border-radius: 24px;
+        padding: 1.8rem 1.8rem 1.5rem 1.8rem;
         color: white;
         margin-bottom: 1rem;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
+    }
+
+    .hero-kicker {
+        display: inline-block;
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.12);
+        backdrop-filter: blur(6px);
+        margin-bottom: 0.8rem;
     }
 
     .hero-title {
-        font-size: 2rem;
+        font-size: 2.25rem;
         font-weight: 800;
-        margin-bottom: 0.25rem;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.3rem;
+        line-height: 1.1;
     }
 
     .hero-subtitle {
         font-size: 1rem;
-        opacity: 0.9;
-        margin-bottom: 0;
+        color: rgba(255,255,255,0.86);
+        margin-bottom: 0.9rem;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+
+    .hero-stat {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.09);
+        padding: 0.8rem 1rem;
+        border-radius: 16px;
+        min-width: 150px;
+    }
+
+    .hero-stat-label {
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.72);
+        margin-bottom: 0.15rem;
+    }
+
+    .hero-stat-value {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: white;
+    }
+
+    .section-card {
+        background: rgba(255,255,255,0.84);
+        border: 1px solid rgba(226,232,240,0.95);
+        border-radius: 20px;
+        padding: 1rem 1rem 0.9rem 1rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        margin-bottom: 1rem;
     }
 
     .section-title {
-        font-size: 1.35rem;
+        font-size: 1.28rem;
         font-weight: 800;
-        margin-top: 0.2rem;
-        margin-bottom: 0.8rem;
+        color: #0f172a;
+        margin-bottom: 0.2rem;
     }
 
-    .mini-note {
-        color: #475569;
+    .section-subtitle {
+        color: #64748b;
         font-size: 0.95rem;
         margin-bottom: 0.8rem;
     }
 
-    .status-chip-open {
+    .top-chip {
         display: inline-block;
         padding: 0.35rem 0.7rem;
         border-radius: 999px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        margin-right: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .chip-user {
+        background: #e0f2fe;
+        color: #075985;
+    }
+
+    .chip-admin {
+        background: #ede9fe;
+        color: #5b21b6;
+    }
+
+    .chip-guest {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .event-card {
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #e2e8f0;
+        border-radius: 22px;
+        padding: 1.15rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 10px 28px rgba(15,23,42,0.06);
+    }
+
+    .event-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.8rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .event-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.15;
+    }
+
+    .event-pill {
+        display: inline-block;
+        padding: 0.38rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .pill-open {
         background: #dcfce7;
         color: #166534;
-        font-size: 0.85rem;
-        font-weight: 700;
-        margin-bottom: 0.6rem;
     }
 
-    .status-chip-warning {
-        display: inline-block;
-        padding: 0.35rem 0.7rem;
-        border-radius: 999px;
+    .pill-warning {
         background: #fef3c7;
         color: #92400e;
-        font-size: 0.85rem;
-        font-weight: 700;
-        margin-bottom: 0.6rem;
     }
 
-    .status-chip-full {
-        display: inline-block;
-        padding: 0.35rem 0.7rem;
-        border-radius: 999px;
+    .pill-full {
         background: #fee2e2;
         color: #991b1b;
-        font-size: 0.85rem;
+    }
+
+    .pill-paid {
+        background: #f3e8ff;
+        color: #7e22ce;
+    }
+
+    .event-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 0.65rem;
+        margin-top: 0.7rem;
+        margin-bottom: 0.7rem;
+    }
+
+    .meta-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 0.8rem 0.9rem;
+    }
+
+    .meta-label {
+        font-size: 0.76rem;
+        color: #64748b;
         font-weight: 700;
-        margin-bottom: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.18rem;
     }
 
-    .event-meta {
-        color: #334155;
+    .meta-value {
+        color: #0f172a;
         font-size: 0.97rem;
-        margin-bottom: 0.25rem;
+        font-weight: 600;
     }
 
-    .soft-divider {
-        height: 1px;
-        background: linear-gradient(90deg, rgba(148,163,184,0.2), rgba(148,163,184,0.6), rgba(148,163,184,0.2));
-        margin-top: 0.75rem;
-        margin-bottom: 0.75rem;
-        border-radius: 999px;
+    .description-box {
+        background: #fcfcff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 0.9rem;
+        color: #334155;
+        margin-top: 0.25rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 0.7rem;
+        margin-top: 0.7rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .metric-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 0.9rem;
+        text-align: center;
+    }
+
+    .metric-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 0.2rem;
     }
 
     .team-box-blue {
-        background: #eff6ff;
+        background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
         border: 1px solid #bfdbfe;
-        border-radius: 12px;
-        padding: 0.9rem;
+        border-radius: 16px;
+        padding: 0.95rem;
         margin-top: 0.5rem;
     }
 
     .team-box-red {
-        background: #fef2f2;
+        background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
         border: 1px solid #fecaca;
-        border-radius: 12px;
-        padding: 0.9rem;
+        border-radius: 16px;
+        padding: 0.95rem;
         margin-top: 0.5rem;
     }
 
     .payment-box {
-        background: #faf5ff;
+        background: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
         border: 1px solid #e9d5ff;
-        border-radius: 12px;
-        padding: 0.9rem;
-        margin-top: 0.6rem;
-        margin-bottom: 0.4rem;
+        border-radius: 16px;
+        padding: 0.95rem;
+        margin-top: 0.55rem;
+        margin-bottom: 0.45rem;
+        color: #581c87;
+    }
+
+    .soft-divider {
+        height: 1px;
+        background: linear-gradient(90deg, rgba(148,163,184,0.12), rgba(148,163,184,0.6), rgba(148,163,184,0.12));
+        margin-top: 0.85rem;
+        margin-bottom: 0.85rem;
+        border-radius: 999px;
+    }
+
+    .small-muted {
+        color: #64748b;
+        font-size: 0.9rem;
     }
 
     .stButton > button {
-        border-radius: 12px;
-        height: 2.85rem;
+        border-radius: 14px;
+        height: 2.9rem;
         font-weight: 700;
-        border: 1px solid #cbd5e1;
+        border: 1px solid #dbe1ea;
+        box-shadow: 0 4px 14px rgba(15,23,42,0.04);
     }
 
     .stTextInput > div > div > input,
     .stTextArea textarea,
     .stDateInput input,
     .stTimeInput input,
-    .stNumberInput input {
-        border-radius: 10px !important;
+    .stNumberInput input,
+    .stSelectbox div[data-baseweb="select"] > div,
+    .stMultiSelect div[data-baseweb="select"] > div {
+        border-radius: 12px !important;
     }
 
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0.4rem;
+        gap: 0.45rem;
     }
 
     .stTabs [data-baseweb="tab"] {
         height: 3rem;
         white-space: nowrap;
-        border-radius: 10px 10px 0 0;
+        border-radius: 14px 14px 0 0;
         padding-left: 1rem;
         padding-right: 1rem;
         font-weight: 700;
     }
 
-    .small-muted {
-        color: #64748b;
-        font-size: 0.9rem;
+    .panel-note {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        border-radius: 14px;
+        padding: 0.85rem 0.95rem;
+        font-size: 0.92rem;
+        margin-bottom: 0.8rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -677,13 +855,23 @@ def parse_teams_data(teams_data):
     return blue_players, red_players
 
 
+def render_status_pill(spots_left):
+    if spots_left == 0:
+        return '<span class="event-pill pill-full">Full</span>'
+    if spots_left <= 2:
+        return '<span class="event-pill pill-warning">Almost full</span>'
+    return '<span class="event-pill pill-open">Open for sign-ups</span>'
+
+
 def render_login_and_signup(users_ws, users_df):
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Access your account</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">Log in to join plans or create a new account in seconds.</div>', unsafe_allow_html=True)
+
     login_col, signup_col = st.columns(2)
 
     with login_col:
-        st.markdown('<div class="section-title">🔐 Login</div>', unsafe_allow_html=True)
-        st.markdown('<div class="mini-note">Welcome back. Sign in to join events and manage your plans.</div>', unsafe_allow_html=True)
-
+        st.markdown("### 🔐 Login")
         with st.form("login_form"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
@@ -699,9 +887,7 @@ def render_login_and_signup(users_ws, users_df):
                     st.error(msg)
 
     with signup_col:
-        st.markdown('<div class="section-title">✨ Create Account</div>', unsafe_allow_html=True)
-        st.markdown('<div class="mini-note">New here? Create a quick account to join games and social plans.</div>', unsafe_allow_html=True)
-
+        st.markdown("### ✨ Create Account")
         with st.form("signup_form"):
             display_name = st.text_input("Display name")
             new_username = st.text_input("Choose a username")
@@ -724,14 +910,7 @@ def render_login_and_signup(users_ws, users_df):
                 else:
                     st.error(msg)
 
-
-def render_status_chip(spots_left):
-    if spots_left == 0:
-        st.markdown('<span class="status-chip-full">Full</span>', unsafe_allow_html=True)
-    elif spots_left <= 2:
-        st.markdown('<span class="status-chip-warning">Almost full</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="status-chip-open">Open for sign-ups</span>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 init_session()
@@ -743,10 +922,29 @@ except Exception:
     st.error("Could not load Google Sheets data.")
     st.stop()
 
-st.markdown("""
-<div class="hero-card">
+total_open_events = 0 if events_df.empty else len(events_df[events_df["status"].astype(str).str.lower() == "open"])
+total_signups = 0 if signups_df.empty else len(signups_df)
+total_users = 0 if users_df.empty else len(users_df)
+
+st.markdown(f"""
+<div class="hero-wrap">
+    <div class="hero-kicker">Internal community platform</div>
     <div class="hero-title">🎉 Grivalia Social Hub</div>
-    <p class="hero-subtitle">Internal events made simple — basketball, drinks, lunch plans and more.</p>
+    <div class="hero-subtitle">A cleaner way to organize sports, drinks, lunches, and internal social plans — all in one place.</div>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hero-stat-label">Open events</div>
+            <div class="hero-stat-value">{total_open_events}</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-label">Total signups</div>
+            <div class="hero-stat-value">{total_signups}</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hero-stat-label">Users</div>
+            <div class="hero-stat-value">{total_users}</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -754,17 +952,23 @@ top_left, top_mid, top_right = st.columns([3, 2, 1])
 
 with top_left:
     if st.session_state.logged_in:
-        role = "Admin" if st.session_state.is_admin else "User"
-        st.success(f"Logged in as {st.session_state.display_name} ({role})")
+        role_chip = "chip-admin" if st.session_state.is_admin else "chip-user"
+        role_text = "Admin" if st.session_state.is_admin else "User"
+        st.markdown(
+            f'<span class="top-chip {role_chip}">Signed in as {st.session_state.display_name} · {role_text}</span>',
+            unsafe_allow_html=True
+        )
     else:
-        st.info("Log in or create an account to join events and manage your bookings.")
+        st.markdown('<span class="top-chip chip-guest">Browsing as guest</span>', unsafe_allow_html=True)
 
 with top_mid:
     if st.session_state.logged_in:
         st.markdown(
-            f"<div class='small-muted'>Signed in as <strong>{st.session_state.username}</strong></div>",
+            f"<div class='small-muted'>Username: <strong>{st.session_state.username}</strong></div>",
             unsafe_allow_html=True
         )
+    else:
+        st.markdown("<div class='small-muted'>Log in to join events and manage bookings.</div>", unsafe_allow_html=True)
 
 with top_right:
     if st.button("Refresh", use_container_width=True):
@@ -786,8 +990,9 @@ if st.session_state.is_admin:
 tab_objects = st.tabs(tabs)
 
 with tab_objects[0]:
-    st.markdown('<div class="section-title">🎯 What’s happening</div>', unsafe_allow_html=True)
-    st.markdown('<div class="mini-note">Browse upcoming plans and jump in before spots run out.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">What’s happening</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">Browse upcoming plans, check availability, and join before spots run out.</div>', unsafe_allow_html=True)
 
     if events_df.empty:
         st.info("No events yet.")
@@ -797,8 +1002,10 @@ with tab_objects[0]:
         if open_events.empty:
             st.info("No open events right now.")
         else:
-            category_options = ["All"] + sorted(open_events["category"].dropna().astype(str).unique().tolist())
-            selected_category = st.selectbox("Filter by activity", category_options)
+            filter_col1, filter_col2 = st.columns([2, 4])
+            with filter_col1:
+                category_options = ["All"] + sorted(open_events["category"].dropna().astype(str).unique().tolist())
+                selected_category = st.selectbox("Filter by activity", category_options)
 
             if selected_category != "All":
                 open_events = open_events[open_events["category"].astype(str) == selected_category]
@@ -819,123 +1026,168 @@ with tab_objects[0]:
                 teams_generated = str(event.get("teams_generated", "no")).strip().lower() == "yes"
                 is_paid = str(event.get("is_paid", "no")).strip().lower() == "yes"
 
-                with st.container(border=True):
-                    st.markdown(f"## {icon} {event['title']}")
-                    render_status_chip(spots_left)
+                st.markdown('<div class="event-card">', unsafe_allow_html=True)
 
-                    if not signups_open:
-                        st.warning("Signups are closed for this event.")
+                right_badges = render_status_pill(spots_left)
+                if is_paid:
+                    right_badges += ' <span class="event-pill pill-paid">Paid</span>'
 
-                    st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(event['date']), str(event['time']))}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='event-meta'><strong>Where:</strong> {event['location']}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div class='event-meta'><strong>Category:</strong> {event['category']}</div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="event-header-row">
+                    <div class="event-title">{icon} {event['title']}</div>
+                    <div>{right_badges}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                    if str(event["description"]).strip():
-                        st.markdown(f"<div class='event-meta'><strong>About:</strong> {event['description']}</div>", unsafe_allow_html=True)
+                if not signups_open:
+                    st.warning("Signups are closed for this event.")
 
-                    if is_paid:
-                        display_price = format_price(event.get("price", ""))
+                st.markdown(f"""
+                <div class="event-grid">
+                    <div class="meta-card">
+                        <div class="meta-label">When</div>
+                        <div class="meta-value">{format_event_datetime(str(event['date']), str(event['time']))}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Where</div>
+                        <div class="meta-value">{event['location']}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Category</div>
+                        <div class="meta-value">{event['category']}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Capacity</div>
+                        <div class="meta-value">{int(event['max_participants'])} participants</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                        st.markdown(f"""
-                        <div class="payment-box">
-                            <strong>💰 Paid Event</strong><br>
-                            Price per person: €{display_price}
-                        </div>
-                        """, unsafe_allow_html=True)
+                if str(event["description"]).strip():
+                    st.markdown(f"""
+                    <div class="description-box">
+                        <strong>About this event</strong><br>
+                        {event["description"]}
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                        payment_methods = [m.strip() for m in str(event.get("payment_methods", "")).split(",") if m.strip()]
-                        if payment_methods:
-                            st.markdown("**Payment options:**")
-                            for method in payment_methods:
-                                st.write(f"• {method}")
+                if is_paid:
+                    display_price = format_price(event.get("price", ""))
+                    st.markdown(f"""
+                    <div class="payment-box">
+                        <strong>💰 Paid Event</strong><br>
+                        Price per person: €{display_price}
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                        if "IRIS" in payment_methods:
-                            st.write(f"IRIS: {IRIS_NUMBER}")
-                        if "IBAN (Eurobank)" in payment_methods:
-                            st.write(f"Eurobank IBAN: {EUROBANK_IBAN}")
-                        if "Cash" in payment_methods:
-                            st.write("Cash accepted")
+                    payment_methods = [m.strip() for m in str(event.get("payment_methods", "")).split(",") if m.strip()]
+                    if payment_methods:
+                        st.markdown("**Payment options**")
+                        for method in payment_methods:
+                            st.write(f"• {method}")
 
-                    st.markdown('<div class="soft-divider"></div>', unsafe_allow_html=True)
+                    if "IRIS" in payment_methods:
+                        st.write(f"IRIS: {IRIS_NUMBER}")
+                    if "IBAN (Eurobank)" in payment_methods:
+                        st.write(f"Eurobank IBAN: {EUROBANK_IBAN}")
+                    if "Cash" in payment_methods:
+                        st.write("Cash accepted")
 
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("Confirmed", len(confirmed))
-                    c2.metric("Spots left", spots_left)
-                    c3.metric("Waitlist", len(waitlist))
+                st.markdown(f"""
+                <div class="metrics-row">
+                    <div class="metric-box">
+                        <div class="metric-value">{len(confirmed)}</div>
+                        <div class="metric-label">Confirmed</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-value">{spots_left}</div>
+                        <div class="metric-label">Spots left</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-value">{len(waitlist)}</div>
+                        <div class="metric-label">Waitlist</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                    if my_status == "confirmed":
-                        st.success("You are confirmed for this event.")
-                    elif my_status == "waitlist":
-                        st.info("You are currently on the waitlist for this event.")
+                if my_status == "confirmed":
+                    st.success("You are confirmed for this event.")
+                elif my_status == "waitlist":
+                    st.info("You are currently on the waitlist for this event.")
 
-                    if teams_generated and str(event.get("teams_data", "")).strip():
-                        blue_players, red_players = parse_teams_data(event.get("teams_data", ""))
+                if teams_generated and str(event.get("teams_data", "")).strip():
+                    blue_players, red_players = parse_teams_data(event.get("teams_data", ""))
 
-                        st.markdown("### 🔥 Teams are ready")
-                        team_col1, team_col2 = st.columns(2)
+                    st.markdown("### Teams")
+                    team_col1, team_col2 = st.columns(2)
 
-                        with team_col1:
-                            st.markdown('<div class="team-box-blue"><strong>🔵 Team Blue</strong></div>', unsafe_allow_html=True)
-                            for p in blue_players:
-                                st.write(f"• {p}")
+                    with team_col1:
+                        st.markdown('<div class="team-box-blue"><strong>🔵 Team Blue</strong></div>', unsafe_allow_html=True)
+                        for p in blue_players:
+                            st.write(f"• {p}")
 
-                        with team_col2:
-                            st.markdown('<div class="team-box-red"><strong>🔴 Team Red</strong></div>', unsafe_allow_html=True)
-                            for p in red_players:
-                                st.write(f"• {p}")
+                    with team_col2:
+                        st.markdown('<div class="team-box-red"><strong>🔴 Team Red</strong></div>', unsafe_allow_html=True)
+                        for p in red_players:
+                            st.write(f"• {p}")
 
-                    detail_col1, detail_col2 = st.columns(2)
+                detail_col1, detail_col2 = st.columns(2)
 
-                    with detail_col1:
-                        with st.expander("🙌 Who's in"):
-                            if confirmed.empty:
-                                st.write("No confirmed attendees yet.")
-                            else:
-                                for idx, name in enumerate(confirmed["participant_name"].tolist(), start=1):
-                                    st.write(f"{idx}. {name}")
+                with detail_col1:
+                    with st.expander("🙌 Confirmed attendees"):
+                        if confirmed.empty:
+                            st.write("No confirmed attendees yet.")
+                        else:
+                            for idx, name in enumerate(confirmed["participant_name"].tolist(), start=1):
+                                st.write(f"{idx}. {name}")
 
-                    with detail_col2:
-                        with st.expander("⏳ Waitlist"):
-                            if waitlist.empty:
-                                st.write("No one on the waitlist.")
-                            else:
-                                for idx, name in enumerate(waitlist["participant_name"].tolist(), start=1):
-                                    st.write(f"{idx}. {name}")
+                with detail_col2:
+                    with st.expander("⏳ Waitlist"):
+                        if waitlist.empty:
+                            st.write("No one on the waitlist.")
+                        else:
+                            for idx, name in enumerate(waitlist["participant_name"].tolist(), start=1):
+                                st.write(f"{idx}. {name}")
 
-                    if st.session_state.logged_in:
-                        col_join, col_cancel = st.columns(2)
+                if st.session_state.logged_in:
+                    col_join, col_cancel = st.columns(2)
 
-                        with col_join:
-                            join_disabled = my_status is not None or not signups_open
-                            if st.button("Join Event", key=f"join_{event_id}", use_container_width=True, disabled=join_disabled):
-                                msg, typ = signup_user(
-                                    signups_ws,
-                                    signups_df,
-                                    event_id,
-                                    st.session_state.display_name,
-                                    event["max_participants"],
-                                )
-                                show_message(msg, typ)
-                                refresh_data()
-                                st.rerun()
+                    with col_join:
+                        join_disabled = my_status is not None or not signups_open
+                        if st.button("Join Event", key=f"join_{event_id}", use_container_width=True, disabled=join_disabled):
+                            msg, typ = signup_user(
+                                signups_ws,
+                                signups_df,
+                                event_id,
+                                st.session_state.display_name,
+                                event["max_participants"],
+                            )
+                            show_message(msg, typ)
+                            refresh_data()
+                            st.rerun()
 
-                        with col_cancel:
-                            cancel_disabled = my_status is None
-                            if st.button("Cancel Booking", key=f"cancel_{event_id}", use_container_width=True, disabled=cancel_disabled):
-                                msg, typ = cancel_signup(
-                                    signups_ws,
-                                    event_id,
-                                    st.session_state.display_name,
-                                )
-                                show_message(msg, typ)
-                                refresh_data()
-                                st.rerun()
-                    else:
-                        st.warning("Log in or create an account to join this event.")
+                    with col_cancel:
+                        cancel_disabled = my_status is None
+                        if st.button("Cancel Booking", key=f"cancel_{event_id}", use_container_width=True, disabled=cancel_disabled):
+                            msg, typ = cancel_signup(
+                                signups_ws,
+                                event_id,
+                                st.session_state.display_name,
+                            )
+                            show_message(msg, typ)
+                            refresh_data()
+                            st.rerun()
+                else:
+                    st.warning("Log in or create an account to join this event.")
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with tab_objects[1]:
-    st.markdown('<div class="section-title">📅 Your plans</div>', unsafe_allow_html=True)
-    st.markdown('<div class="mini-note">See what you’ve joined and manage your bookings in one place.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Your plans</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-subtitle">Track what you have joined and manage your bookings in one place.</div>', unsafe_allow_html=True)
 
     if not st.session_state.logged_in:
         st.info("Log in to see your bookings.")
@@ -959,38 +1211,57 @@ with tab_objects[1]:
                     icon = get_category_icon(str(row.get("category", "Other")))
                     status = str(row.get("status_signup", "")).strip()
 
-                    with st.container(border=True):
-                        st.markdown(f"### {icon} {row.get('title', 'Unknown Event')}")
-                        st.markdown(f"<div class='event-meta'><strong>When:</strong> {format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='event-meta'><strong>Where:</strong> {row.get('location', '')}</div>", unsafe_allow_html=True)
+                    st.markdown('<div class="event-card">', unsafe_allow_html=True)
+                    st.markdown(f'<div class="event-title">{icon} {row.get("title", "Unknown Event")}</div>', unsafe_allow_html=True)
 
-                        if str(row.get("is_paid", "no")).strip().lower() == "yes":
-                            st.write(f"💰 Paid event — €{format_price(row.get('price', ''))} per person")
+                    st.markdown(f"""
+                    <div class="event-grid">
+                        <div class="meta-card">
+                            <div class="meta-label">When</div>
+                            <div class="meta-value">{format_event_datetime(str(row.get('date', '')), str(row.get('time', '')))}</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">Where</div>
+                            <div class="meta-value">{row.get('location', '')}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                        if status == "confirmed":
-                            st.success("Confirmed")
-                        elif status == "waitlist":
-                            st.info("On waitlist")
-                        else:
-                            st.write(status)
+                    if str(row.get("is_paid", "no")).strip().lower() == "yes":
+                        st.write(f"💰 Paid event — €{format_price(row.get('price', ''))} per person")
 
-                        if st.button("Cancel This Booking", key=f"my_cancel_{row['event_id']}", use_container_width=True):
-                            msg, typ = cancel_signup(signups_ws, row["event_id"], st.session_state.display_name)
-                            show_message(msg, typ)
-                            refresh_data()
-                            st.rerun()
+                    if status == "confirmed":
+                        st.success("Confirmed")
+                    elif status == "waitlist":
+                        st.info("On waitlist")
+                    else:
+                        st.write(status)
+
+                    if st.button("Cancel This Booking", key=f"my_cancel_{row['event_id']}", use_container_width=True):
+                        msg, typ = cancel_signup(signups_ws, row["event_id"], st.session_state.display_name)
+                        show_message(msg, typ)
+                        refresh_data()
+                        st.rerun()
+
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with tab_objects[2]:
     if st.session_state.logged_in:
-        st.success(f"You are logged in as {st.session_state.display_name}.")
-        st.markdown('<div class="mini-note">You can now join events, manage your plans, and keep track of your status.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">Welcome back, {st.session_state.display_name}</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-subtitle">You are already signed in and ready to join or manage events.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         render_login_and_signup(users_ws, users_df)
 
 if st.session_state.is_admin:
     with tab_objects[3]:
-        st.markdown('<div class="section-title">🛠️ Admin area</div>', unsafe_allow_html=True)
-        st.markdown('<div class="mini-note">Create events, update details, manage payments, close signups, and create teams.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Admin area</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-subtitle">Create events, update details, manage signups, payment options, and teams.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-note">Changes made here update the live Google Sheet instantly.</div>', unsafe_allow_html=True)
 
         st.subheader("Create Event")
         with st.form("create_event_form"):
@@ -1199,7 +1470,7 @@ if st.session_state.is_admin:
                         st.rerun()
 
                 st.markdown("### Manual Teams")
-                st.markdown('<div class="mini-note">Enter names separated by commas.</div>', unsafe_allow_html=True)
+                st.markdown('<div class="small-muted">Enter names separated by commas.</div>', unsafe_allow_html=True)
 
                 manual_blue_default = ""
                 manual_red_default = ""
@@ -1255,3 +1526,5 @@ if st.session_state.is_admin:
                 how="left"
             )
             st.dataframe(signups_view, use_container_width=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
