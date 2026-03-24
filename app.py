@@ -10,6 +10,7 @@ import streamlit as st
 from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Grivalia Social Hub", page_icon="🎉", layout="wide")
+st.set_option("client.showErrorDetails", False)
 
 st.markdown("""
 <style>
@@ -291,7 +292,7 @@ def get_worksheets():
     return events_ws, signups_ws, users_ws
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def load_data():
     events_ws, signups_ws, users_ws = get_worksheets()
 
@@ -738,9 +739,8 @@ init_session()
 try:
     events_ws, signups_ws, users_ws = get_worksheets()
     events_df, signups_df, users_df = load_data()
-except Exception as e:
+except Exception:
     st.error("Could not load Google Sheets data.")
-    st.exception(e)
     st.stop()
 
 st.markdown("""
@@ -1152,7 +1152,7 @@ if st.session_state.is_admin:
                         if not teams_data:
                             st.warning("Not enough confirmed players to generate teams.")
                         else:
-                            msg, typ = update_event(
+                            update_event(
                                 events_ws,
                                 selected_event_id,
                                 selected_event["title"],
@@ -1176,7 +1176,7 @@ if st.session_state.is_admin:
 
                 with team_col2:
                     if st.button("Clear Teams", use_container_width=True):
-                        msg, typ = update_event(
+                        update_event(
                             events_ws,
                             selected_event_id,
                             selected_event["title"],
@@ -1222,7 +1222,7 @@ if st.session_state.is_admin:
                         else:
                             manual_teams_data = f"Blue:{','.join(blue_players)}|Red:{','.join(red_players)}"
 
-                            msg, typ = update_event(
+                            update_event(
                                 events_ws,
                                 selected_event_id,
                                 selected_event["title"],
