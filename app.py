@@ -173,7 +173,10 @@ CATEGORY_ICONS = {
 }
 
 SPORT_CATEGORIES = ["Basketball", "Football", "Padel"]
-PAYMENT_OPTIONS = ["IRIS", "IBAN (Eurobank)", "Revolut", "Cash"]
+PAYMENT_OPTIONS = ["IRIS", "IBAN (Eurobank)", "Cash"]
+
+IRIS_NUMBER = "6944176835"
+EUROBANK_IBAN = "GR2402600020000630202608586"
 
 
 def get_category_icon(category):
@@ -207,6 +210,32 @@ def format_event_datetime(date_str, time_str):
         return dt.strftime("%A, %d %B %Y at %H:%M")
     except Exception:
         return f"{date_str} {time_str}"
+
+
+def parse_price(value):
+    raw = str(value).strip()
+    if not raw:
+        return None
+
+    raw = raw.replace("€", "").replace(" ", "")
+
+    # Handle both comma and dot decimals safely
+    if "," in raw and "." in raw:
+        raw = raw.replace(",", "")
+    elif "," in raw and "." not in raw:
+        raw = raw.replace(",", ".")
+
+    try:
+        return float(raw)
+    except Exception:
+        return None
+
+
+def format_price(value):
+    parsed = parse_price(value)
+    if parsed is None:
+        return ""
+    return f"{parsed:.2f}"
 
 
 def show_message(msg, msg_type="info"):
@@ -483,11 +512,23 @@ def add_event(
     description,
     is_paid,
     price,
-    payment_methods,
-    payment_details
+    payment_methods
 ):
     if not normalize_name(title):
         return "Title is required.", "warning"
+
+    stored_price = format_price(price) if is_paid else ""
+
+    payment_details_parts = []
+    if is_paid:
+        if "IRIS" in payment_methods:
+            payment_details_parts.append(f"IRIS: {IRIS_NUMBER}")
+        if "IBAN (Eurobank)" in payment_methods:
+            payment_details_parts.append(f"Eurobank IBAN: {EUROBANK_IBAN}")
+        if "Cash" in payment_methods:
+            payment_details_parts.append("Cash accepted")
+
+    payment_details = " | ".join(payment_details_parts)
 
     events_ws.append_row([
         str(uuid.uuid4()),
@@ -501,9 +542,9 @@ def add_event(
         "open",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "yes" if is_paid else "no",
-        float(price) if is_paid else "",
+        stored_price,
         ",".join(payment_methods) if is_paid else "",
-        str(payment_details).strip() if is_paid else "",
+        payment_details if is_paid else "",
         "open",
         "no",
         ""
@@ -526,12 +567,22 @@ def update_event(
     is_paid,
     price,
     payment_methods,
-    payment_details,
     signups_open,
     teams_generated,
     teams_data
 ):
     records = events_ws.get_all_records()
+
+    payment_details_parts = []
+    if is_paid:
+        if "IRIS" in payment_methods:
+            payment_details_parts.append(f"IRIS: {IRIS_NUMBER}")
+        if "IBAN (Eurobank)" in payment_methods:
+            payment_details_parts.append(f"Eurobank IBAN: {EUROBANK_IBAN}")
+        if "Cash" in payment_methods:
+            payment_details_parts.append("Cash accepted")
+
+    payment_details = " | ".join(payment_details_parts)
 
     for i, row in enumerate(records, start=2):
         if str(row.get("event_id", "")).strip() == str(event_id):
@@ -547,9 +598,9 @@ def update_event(
                 status,
                 row.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                 "yes" if is_paid else "no",
-                float(price) if is_paid else "",
+                format_price(price) if is_paid else "",
                 ",".join(payment_methods) if is_paid else "",
-                str(payment_details).strip() if is_paid else "",
+                payment_details if is_paid else "",
                 signups_open,
                 teams_generated,
                 teams_data
@@ -771,10 +822,12 @@ with tab_objects[0]:
                         st.markdown(f"<div class='event-meta'><strong>About:</strong> {event['description']}</div>", unsafe_allow_html=True)
 
                     if is_paid:
+                        display_price = format_price(event.get("price", ""))
+
                         st.markdown(f"""
                         <div class="payment-box">
                             <strong>💰 Paid Event</strong><br>
-                            Price per person: €{event.get("price", "")}
+                            Price per person: €{display_price}
                         </div>
                         """, unsafe_allow_html=True)
 
@@ -784,8 +837,12 @@ with tab_objects[0]:
                             for method in payment_methods:
                                 st.write(f"• {method}")
 
-                        if str(event.get("payment_details", "")).strip():
-                            st.info(str(event.get("payment_details", "")))
+                        if "IRIS" in payment_methods:
+                            st.write(f"IRIS: {IRIS_NUMBER}")
+                        if "IBAN (Eurobank)" in payment_methods:
+                            st.write(f"Eurobank IBAN: {EUROBANK_IBAN}")
+                        if "Cash" in payment_methods:
+                            st.write("Cash accepted")
 
                     st.markdown('<div class="soft-divider"></div>', unsafe_allow_html=True)
 
@@ -896,7 +953,7 @@ with tab_objects[1]:
                         st.markdown(f"<div class='event-meta'><strong>Where:</strong> {row.get('location', '')}</div>", unsafe_allow_html=True)
 
                         if str(row.get("is_paid", "no")).strip().lower() == "yes":
-                            st.write(f"💰 Paid event — €{row.get('price', '')} per person")
+                            st.write(f"💰 Paid event — €{format_price(row.get('price', ''))} per person")
 
                         if status == "confirmed":
                             st.success("Confirmed")
@@ -935,9 +992,8 @@ if st.session_state.is_admin:
 
             st.markdown("### Payment settings")
             create_is_paid = st.checkbox("Paid event")
-            create_price = st.number_input("Price (€)", min_value=0.0, step=1.0, value=0.0)
+            create_price = st.number_input("Price (€)", min_value=0.0, step=0.5, value=0.0, format="%.2f")
             create_payment_methods = st.multiselect("Payment methods", PAYMENT_OPTIONS)
-            create_payment_details = st.text_area("Payment details / instructions")
 
             submitted = st.form_submit_button("Create Event", use_container_width=True)
 
@@ -953,8 +1009,7 @@ if st.session_state.is_admin:
                     description,
                     create_is_paid,
                     create_price,
-                    create_payment_methods,
-                    create_payment_details,
+                    create_payment_methods
                 )
                 show_message(msg, typ)
                 refresh_data()
@@ -1000,17 +1055,14 @@ if st.session_state.is_admin:
                 edit_price = st.number_input(
                     "Price (€)",
                     min_value=0.0,
-                    step=1.0,
-                    value=float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0
+                    step=0.5,
+                    value=parse_price(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                    format="%.2f"
                 )
                 edit_payment_methods = st.multiselect(
                     "Payment methods",
                     PAYMENT_OPTIONS,
                     default=[m for m in current_payment_methods if m in PAYMENT_OPTIONS]
-                )
-                edit_payment_details = st.text_area(
-                    "Payment details / instructions",
-                    value=str(selected_event.get("payment_details", ""))
                 )
 
                 st.markdown("### Signup settings")
@@ -1039,7 +1091,6 @@ if st.session_state.is_admin:
                         edit_is_paid,
                         edit_price,
                         edit_payment_methods,
-                        edit_payment_details,
                         edit_signups_open,
                         str(selected_event.get("teams_generated", "no")),
                         str(selected_event.get("teams_data", ""))
@@ -1101,9 +1152,8 @@ if st.session_state.is_admin:
                                 selected_event["description"],
                                 selected_event["status"],
                                 str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
-                                float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                                parse_price(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
                                 [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
-                                str(selected_event.get("payment_details", "")),
                                 str(selected_event.get("signups_open", "open")),
                                 "yes",
                                 teams_data
@@ -1126,9 +1176,8 @@ if st.session_state.is_admin:
                             selected_event["description"],
                             selected_event["status"],
                             str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
-                            float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                            parse_price(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
                             [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
-                            str(selected_event.get("payment_details", "")),
                             str(selected_event.get("signups_open", "open")),
                             "no",
                             ""
@@ -1173,9 +1222,8 @@ if st.session_state.is_admin:
                                 selected_event["description"],
                                 selected_event["status"],
                                 str(selected_event.get("is_paid", "no")).strip().lower() == "yes",
-                                float(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
+                                parse_price(selected_event["price"]) if str(selected_event.get("price", "")).strip() else 0.0,
                                 [m.strip() for m in str(selected_event.get("payment_methods", "")).split(",") if m.strip()],
-                                str(selected_event.get("payment_details", "")),
                                 str(selected_event.get("signups_open", "open")),
                                 "yes",
                                 manual_teams_data
